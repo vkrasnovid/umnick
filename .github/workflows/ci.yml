@@ -1,0 +1,145 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "22"
+
+jobs:
+  lint-python:
+    name: Lint (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install ruff
+        run: pip install ruff
+      - name: Run ruff
+        run: ruff check bridge/ tools/ engine/ --output-format=github
+
+  test-bridge:
+    name: Tests — Bridge
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: umnick_test
+          POSTGRES_USER: umnick
+          POSTGRES_PASSWORD: umnick_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Init DB schema
+        run: PGPASSWORD=umnick_pass psql -h localhost -U umnick -d umnick_test -f scripts/init_db.sql
+        env:
+          PGHOST: localhost
+          PGUSER: umnick
+          PGPASSWORD: umnick_pass
+      - name: Run bridge tests
+        working-directory: bridge
+        run: pytest tests/ -v --tb=short
+        env:
+          DATABASE_URL: postgresql+asyncpg://umnick:umnick_pass@localhost:5432/umnick_test
+          DATABASE_URL_SYNC: postgresql://umnick:umnick_pass@localhost:5432/umnick_test
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: ci-test-secret-key
+          LOG_LEVEL: WARNING
+
+  test-tools:
+    name: Tests — Tools
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: umnick_test
+          POSTGRES_USER: umnick
+          POSTGRES_PASSWORD: umnick_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Init DB schema + seed
+        run: |
+          PGPASSWORD=umnick_pass psql -h localhost -U umnick -d umnick_test -f scripts/init_db.sql
+          PGPASSWORD=umnick_pass psql -h localhost -U umnick -d umnick_test -f scripts/seed_data.sql
+        env:
+          PGHOST: localhost
+          PGUSER: umnick
+          PGPASSWORD: umnick_pass
+      - name: Run tools tests
+        working-directory: tools
+        run: pytest tests/ -v --tb=short
+        env:
+          DATABASE_URL: postgresql+asyncpg://umnick:umnick_pass@localhost:5432/umnick_test
+          SECRET_KEY: ci-test-secret-key
+          LOG_LEVEL: WARNING
+
+  test-engine:
+    name: Tests — Engine
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Install system deps
+        run: sudo apt-get update && sudo apt-get install -y libpq-dev
+      - name: Run engine tests
+        working-directory: engine
+        run: pytest tests/ -v --tb=short
+        env:
+          SECRET_KEY: ci-test-secret-key
+          LOG_LEVEL: WARNING
+
+  docker-build:
+    name: Docker Build Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build bridge image
+        run: docker build -t umnick-bridge --file docker/Dockerfile.bridge .
+      - name: Build tools image
+        run: docker build -t umnick-tools --file docker/Dockerfile.tools .
+      - name: Build engine image
+        run: docker build -t umnick-engine --file docker/Dockerfile.engine .
