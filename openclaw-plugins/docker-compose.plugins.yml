@@ -1,0 +1,20 @@
+services:
+  umnick-plugins:
+    build:
+      context: ../openclaw-plugins
+      dockerfile: Dockerfile
+    container_name: umnick-plugins
+    restart: unless-stopped
+    environment:
+      - TOOLS_API_URL=http://tools:8000
+      - OPENCLAW_API_KEY=${OPENCLAW_API_KEY}
+      - OPENCLAW_BASE_URL=${OPENCLAW_BASE_URL:-http://gateway:18789/v1}
+    networks:
+      - umnick-network
+    depends_on:
+      - tools
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

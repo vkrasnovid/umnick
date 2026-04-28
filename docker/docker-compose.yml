@@ -1,0 +1,157 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: umnick-postgres
+    environment:
+      POSTGRES_DB: umnick
+      POSTGRES_USER: umnick
+      POSTGRES_PASSWORD: umnick_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../scripts/init_db.sql:/docker-entrypoint-initdb.d/01_init.sql
+      - ../scripts/seed_data.sql:/docker-entrypoint-initdb.d/02_seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umnick"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - umnick-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: umnick-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - umnick-network
+    restart: unless-stopped
+
+  bridge:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.bridge
+    container_name: umnick-bridge
+    ports:
+      - "8085:8000"
+    env_file:
+      - ../.env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://umnick:umnick_pass@postgres:5432/umnick
+      - DATABASE_URL_SYNC=postgresql://umnick:umnick_pass@postgres:5432/umnick
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - LOG_LEVEL=INFO
+      - DEBUG=false
+      - SECRET_KEY=umnick-dev-secret-key-change-in-production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - umnick-network
+    restart: unless-stopped
+
+  tools:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.tools
+    container_name: umnick-tools
+    ports:
+      - "8086:8001"
+    env_file:
+      - ../.env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://umnick:umnick_pass@postgres:5432/umnick
+      - LOG_LEVEL=INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - umnick-network
+    restart: unless-stopped
+
+  celery-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.engine
+    container_name: umnick-celery-worker
+    env_file:
+      - ../.env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://umnick:umnick_pass@postgres:5432/umnick
+      - DATABASE_URL_SYNC=postgresql://umnick:umnick_pass@postgres:5432/umnick
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - LOG_LEVEL=INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - umnick-network
+    restart: unless-stopped
+
+  celery-beat:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.engine
+    container_name: umnick-celery-beat
+    command: ["celery", "-A", "src.celery_app", "beat", "--loglevel=info"]
+    env_file:
+      - ../.env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://umnick:umnick_pass@postgres:5432/umnick
+      - DATABASE_URL_SYNC=postgresql://umnick:umnick_pass@postgres:5432/umnick
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - LOG_LEVEL=INFO
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - umnick-network
+    restart: unless-stopped
+
+  umnick-plugins:
+    build:
+      context: ../openclaw-plugins
+      dockerfile: Dockerfile
+    container_name: umnick-plugins
+    restart: unless-stopped
+    environment:
+      - TOOLS_API_URL=http://tools:8000
+      - OPENCLAW_API_KEY=${OPENCLAW_API_KEY:-}
+      - OPENCLAW_BASE_URL=${OPENCLAW_BASE_URL:-http://gateway:18789/v1}
+    depends_on:
+      tools:
+        condition: service_started
+    networks:
+      - umnick-network
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  pgdata:
+
+networks:
+  umnick-network:
+    driver: bridge
