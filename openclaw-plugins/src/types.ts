@@ -62,4 +62,5 @@ export interface ToolDefinition {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  handler: (params: Record<string, unknown>, context: { tenantId: string }) => Promise<string>;
 }
