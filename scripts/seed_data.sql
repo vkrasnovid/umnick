@@ -72,7 +72,7 @@ VALUES
      'EXT_INV_003', 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a02', 'd0eebc99-9c0b-4ef8-bb6d-6bb9bd380a02',
      'СФ-2026/011', '2026-03-15', '2026-04-01', 210000, 210000, 'paid'),
     ('e0eebc99-9c0b-4ef8-bb6d-6bb9bd380a04', 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
-     'EXT_INV_004', 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a04',
+     'EXT_INV_004', 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a04', NULL,
      'СФ-2026/010', '2026-03-01', '2026-04-15', 50000, 0, 'unpaid');
 
 -- Demo products

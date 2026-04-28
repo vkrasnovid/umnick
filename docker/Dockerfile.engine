@@ -21,6 +21,8 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 COPY engine/ /app/engine/
 COPY requirements.txt /app/
 
+ENV PYTHONPATH="/app/engine/src:${PYTHONPATH}"
+
 WORKDIR /app/engine
 
 CMD ["celery", "-A", "src.celery_app", "worker", "--loglevel=info", "--concurrency=4"]

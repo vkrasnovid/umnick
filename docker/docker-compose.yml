@@ -128,26 +128,9 @@ services:
       - umnick-network
     restart: unless-stopped
 
-  umnick-plugins:
-    build:
-      context: ../openclaw-plugins
-      dockerfile: Dockerfile
-    container_name: umnick-plugins
-    restart: unless-stopped
-    environment:
-      - TOOLS_API_URL=http://tools:8000
-      - OPENCLAW_API_KEY=${OPENCLAW_API_KEY:-}
-      - OPENCLAW_BASE_URL=${OPENCLAW_BASE_URL:-http://gateway:18789/v1}
-    depends_on:
-      tools:
-        condition: service_started
-    networks:
-      - umnick-network
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+  # umnick-plugins is a module library consumed by OpenClaw.
+  # To run it standalone, use: docker compose -f docker-compose.plugins.yml up
+  # See openclaw-plugins/docker-compose.plugins.yml for details.
 
 volumes:
   pgdata:
