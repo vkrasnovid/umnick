@@ -27,7 +27,7 @@ async def handle_active_clients(
                 FROM umnick.counterparties
                 WHERE tenant_id = :tenant_id
                   AND status = 'active'
-                  AND (:segment IS NULL OR segment = :segment)
+                  AND (CAST(:segment AS text) IS NULL OR segment = CAST(:segment AS text))
             ),
             cp_metrics AS (
                 SELECT
@@ -70,10 +70,10 @@ async def handle_active_clients(
                       AND due_date < CURRENT_DATE
                     GROUP BY counterparty_id
                 ) od ON od.counterparty_id = ac.id
-                WHERE (:has_overdue IS NULL
-                       OR (:has_overdue = TRUE AND od.overdue_count > 0))
-                  AND (:min_revenue_30d IS NULL
-                       OR COALESCE(s30.sales_30d, 0) >= :min_revenue_30d::numeric)
+                WHERE (CAST(:has_overdue AS boolean) IS NULL
+                       OR (CAST(:has_overdue AS boolean) = TRUE AND od.overdue_count > 0))
+                  AND (CAST(:min_revenue_30d AS numeric) IS NULL
+                       OR COALESCE(s30.sales_30d, 0) >= CAST(:min_revenue_30d AS numeric))
             )
             SELECT *
             FROM cp_metrics

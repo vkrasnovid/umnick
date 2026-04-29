@@ -28,8 +28,8 @@ async def handle_client_activity(
             SELECT id, name, inn, status
             FROM umnick.counterparties
             WHERE tenant_id = :tenant_id
-              AND (:counterparty_id IS NULL OR id = :counterparty_id::uuid)
-              AND (:inn IS NULL OR inn = :inn)
+              AND (CAST(:counterparty_id AS uuid) IS NULL OR id = CAST(:counterparty_id AS uuid))
+              AND (CAST(:inn AS text) IS NULL OR inn = CAST(:inn AS text))
             LIMIT 1
         """),
         {

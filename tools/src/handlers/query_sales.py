@@ -33,7 +33,7 @@ async def handle_query_sales(
             WHERE tenant_id = :tenant_id
               AND date >= :period_start
               AND status NOT IN ('cancelled', 'draft')
-              AND (:counterparty_id IS NULL OR counterparty_id = :counterparty_id::uuid)
+              AND (CAST(:counterparty_id AS uuid) IS NULL OR counterparty_id = CAST(:counterparty_id AS uuid))
         """),
         {
             "tenant_id": tid,
@@ -55,7 +55,7 @@ async def handle_query_sales(
             WHERE o.tenant_id = :tenant_id
               AND o.date >= :period_start
               AND o.status NOT IN ('cancelled', 'draft')
-              AND (:counterparty_id IS NULL OR o.counterparty_id = :counterparty_id::uuid)
+              AND (CAST(:counterparty_id AS uuid) IS NULL OR o.counterparty_id = CAST(:counterparty_id AS uuid))
             GROUP BY cp.name
             ORDER BY revenue DESC
             LIMIT 20
@@ -86,7 +86,7 @@ async def handle_query_sales(
                 WHERE tenant_id = :tenant_id
                   AND date >= :period_start
                   AND status NOT IN ('cancelled', 'draft')
-                  AND (:counterparty_id IS NULL OR counterparty_id = :counterparty_id::uuid)
+                  AND (CAST(:counterparty_id AS uuid) IS NULL OR counterparty_id = CAST(:counterparty_id AS uuid))
                 GROUP BY date
                 ORDER BY date
             """),

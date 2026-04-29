@@ -26,9 +26,9 @@ async def handle_contract_utilization(
                        amount, currency, utilization_sum, utilization_pct, status
                 FROM umnick.contracts
                 WHERE tenant_id = :tenant_id
-                  AND (:contract_id IS NULL OR id = :contract_id::uuid)
-                  AND (:counterparty_id IS NULL OR counterparty_id = :counterparty_id::uuid)
-                  AND (:contract_number IS NULL OR number ILIKE '%' || :contract_number || '%')
+                  AND (CAST(:contract_id AS uuid) IS NULL OR id = CAST(:contract_id AS uuid))
+                  AND (CAST(:counterparty_id AS uuid) IS NULL OR counterparty_id = CAST(:counterparty_id AS uuid))
+                  AND (CAST(:contract_number AS text) IS NULL OR number ILIKE '%' || CAST(:contract_number AS text) || '%')
                 LIMIT 1
             )
             SELECT c.id, c.number, c.date_start, c.date_end, c.amount,

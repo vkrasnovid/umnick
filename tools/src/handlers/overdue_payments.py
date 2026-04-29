@@ -32,9 +32,9 @@ async def handle_overdue_payments(
             JOIN umnick.counterparties cp ON cp.id = i.counterparty_id AND cp.tenant_id = :tenant_id
             WHERE i.tenant_id = :tenant_id
               AND i.status IN ('unpaid', 'partial')
-              AND i.due_date < CURRENT_DATE - :days_overdue_min::integer
-              AND (:counterparty_id IS NULL OR i.counterparty_id = :counterparty_id::uuid)
-              AND (:threshold_amount IS NULL OR i.balance >= :threshold_amount::numeric)
+              AND i.due_date < CURRENT_DATE - CAST(:days_overdue_min AS integer)
+              AND (CAST(:counterparty_id AS uuid) IS NULL OR i.counterparty_id = CAST(:counterparty_id AS uuid))
+              AND (CAST(:threshold_amount AS numeric) IS NULL OR i.balance >= CAST(:threshold_amount AS numeric))
             ORDER BY i.due_date ASC
             LIMIT :limit
         """),

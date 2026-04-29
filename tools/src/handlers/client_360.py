@@ -25,9 +25,9 @@ async def handle_client_360(
             SELECT *
             FROM umnick.counterparties
             WHERE tenant_id = :tenant_id
-              AND (:counterparty_id IS NULL OR id = :counterparty_id::uuid)
-              AND (:inn IS NULL OR inn = :inn)
-              AND (:name_query IS NULL OR name ILIKE '%' || :name_query || '%')
+              AND (CAST(:counterparty_id AS uuid) IS NULL OR id = CAST(:counterparty_id AS uuid))
+              AND (CAST(:inn AS text) IS NULL OR inn = CAST(:inn AS text))
+              AND (CAST(:name_query AS text) IS NULL OR name ILIKE '%' || CAST(:name_query AS text) || '%')
             LIMIT 1
         """),
         {

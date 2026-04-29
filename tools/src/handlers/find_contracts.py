@@ -28,15 +28,15 @@ async def handle_find_contracts(
             FROM umnick.contracts c
             LEFT JOIN umnick.counterparties cp ON cp.id = c.counterparty_id AND cp.tenant_id = :tenant_id
             WHERE c.tenant_id = :tenant_id
-              AND (:query IS NULL
-                   OR c.number ILIKE '%' || :query || '%'
-                   OR cp.name ILIKE '%' || :query || '%')
-              AND (:status IS NULL OR c.status = :status)
-              AND (:counterparty_id IS NULL OR c.counterparty_id = :counterparty_id::uuid)
-              AND (:expiring_soon_days IS NULL
+              AND (CAST(:query AS text) IS NULL
+                   OR c.number ILIKE '%' || CAST(:query AS text) || '%'
+                   OR cp.name ILIKE '%' || CAST(:query AS text) || '%')
+              AND (CAST(:status AS text) IS NULL OR c.status = CAST(:status AS text))
+              AND (CAST(:counterparty_id AS uuid) IS NULL OR c.counterparty_id = CAST(:counterparty_id AS uuid))
+              AND (CAST(:expiring_soon_days AS integer) IS NULL
                    OR (c.date_end IS NOT NULL
-                       AND c.date_end BETWEEN CURRENT_DATE AND CURRENT_DATE + :expiring_soon_days::integer))
-              AND (:min_amount IS NULL OR c.amount >= :min_amount::numeric)
+                       AND c.date_end BETWEEN CURRENT_DATE AND CURRENT_DATE + CAST(:expiring_soon_days AS integer)))
+              AND (CAST(:min_amount AS numeric) IS NULL OR c.amount >= CAST(:min_amount AS numeric))
             ORDER BY c.date_start DESC
             LIMIT :limit
         """),
